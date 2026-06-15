@@ -1,0 +1,40 @@
+img_name: "train_images.npy"
+
+lbl_name: "train_labels.npy"
+
+data_sources:
+  - type: idx # MNIST 原生格式
+    images_file: /path/to/train-images-idx3-ubyte.gz
+    labels_file: /path/to/train-labels-idx1-ubyte.gz
+    mode: labeled
+
+  - type: idx
+    images_file: /path/to/emnist-mnist-train-images-idx3-ubyte
+    labels_file: /path/to/emnist-mnist-train-labels-idx1-ubyte
+    mode: labeled
+
+  - type: idx
+    images_file: /path/to/test-A-images-idx3-ubyte
+    labels_file: /path/to/test-A-labels-idx1-ubyte
+    mode: labeled
+
+  - type: idx
+    images_file: /path/to/MNIST-S/raw/train-images-idx3-ubyte
+    labels_file: /path/to/MNIST-S/raw/train-labels-idx1-ubyte
+    mode: labeled
+
+  - type: npy_dir # MNIST-C (多个腐蚀子文件夹)
+    path: /path/to/MNIST-C
+    split: train
+    mode: labeled
+
+  - type: affnist # affNIST .mat 文件或目录
+    path: /path/to/affnist
+    mode: labeled
+
+  - type: image_folder
+    path: /path/to/Gen-Hard
+    mode: labeled
+
+# 输出目录
+output_dir: /path/to/processed

@@ -1,0 +1,12 @@
+img_name: "val_images.npy"
+
+lbl_name: "val_labels.npy"
+
+data_sources:
+  - type: idx
+    images_file: /path/to/test_A_images.idx3-ubyte
+    labels_file: /path/to/test_A_labels.idx1-ubyte
+    mode: labeled
+
+# 输出目录
+output_dir: /path/to/processed

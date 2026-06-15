@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data files (large binary)
+data/raw/
+data/processed/*.npy
+
+# Model checkpoints
+checkpoints/
+
+# Logs
+logs/
+
+# Output predictions
+submission.csv
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# YAML config overrides (optional)
+config/local.yaml
+
+# Dataset
+data/
+
+# Private config
+config/
