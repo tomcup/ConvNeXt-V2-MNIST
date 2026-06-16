@@ -1,4 +1,3 @@
-
 import logging
 from typing import Any, Dict, List, Tuple
 import numpy as np
@@ -23,7 +22,9 @@ from src.data_utils.preprocessing import (
 )
 
 
-def process_sources(sources: List[Dict[str, Any]], output_dir: Path, img_name: str, lbl_name: str) -> Tuple[int, Path, Path]:
+def process_sources(
+    sources: List[Dict[str, Any]], output_dir: Path, img_name: str, lbl_name: str
+) -> Tuple[int, Path, Path]:
     """
     处理所有数据源，生成统一的 .npy 文件。
 
@@ -40,32 +41,40 @@ def process_sources(sources: List[Dict[str, Any]], output_dir: Path, img_name: s
     source_infos = []
 
     for src in sources:
-        src_type = src['type']
-        mode = src.get('mode', 'labeled')
-        path = src.get('path', None)
+        src_type = src["type"]
+        mode = src.get("mode", "labeled")
+        path = src.get("path", None)
 
-        if src_type == 'idx':
-            imf = src['images_file']
-            lbf = src.get('labels_file')
+        if src_type == "idx":
+            imf = src["images_file"]
+            lbf = src.get("labels_file")
             cnt = _count_idx(imf)
-            gen_func = lambda imf=imf, lbf=lbf: _load_idx(imf, lbf)
-        elif src_type == 'npy_dir':
+
+            def gen_func(imf=imf, lbf=lbf):
+                return _load_idx(imf, lbf)
+        elif src_type == "npy_dir":
             p = Path(path)
-            split = src.get('split', 'train')
+            split = src.get("split", "train")
             cnt = _count_npy_directory(p, split)
-            gen_func = lambda p=p, s=split: _load_npy_directory(p, s)
-        elif src_type == 'image_folder':
+
+            def gen_func(p=p, s=split):
+                return _load_npy_directory(p, s)
+        elif src_type == "image_folder":
             p = Path(path)
             cnt = _count_image_folder(p)
-            gen_func = lambda p=p: _load_image_folder(p)
-        elif src_type == 'affnist':
+
+            def gen_func(p=p):
+                return _load_image_folder(p)
+        elif src_type == "affnist":
             p = Path(path)
             if p.is_dir():
-                mat_files = sorted(p.glob('*.mat'))
+                mat_files = sorted(p.glob("*.mat"))
             else:
                 mat_files = [p]
             cnt = _count_affnist(mat_files)
-            gen_func = lambda mf=mat_files: _load_affnist(mf)
+
+            def gen_func(mf=mat_files):
+                return _load_affnist(mf)
         else:
             raise ValueError(f"Unsupported source type: {src_type}")
 
@@ -78,8 +87,8 @@ def process_sources(sources: List[Dict[str, Any]], output_dir: Path, img_name: s
     img_path = output_dir / img_name
     lbl_path = output_dir / lbl_name
 
-    img_mm = np.memmap(str(img_path), dtype=np.uint8, mode='w+', shape=(total, 28, 28))
-    lbl_mm = np.memmap(str(lbl_path), dtype=np.int64, mode='w+', shape=(total,))
+    img_mm = np.memmap(str(img_path), dtype=np.uint8, mode="w+", shape=(total, 28, 28))
+    lbl_mm = np.memmap(str(lbl_path), dtype=np.int64, mode="w+", shape=(total,))
 
     current_idx = 0
     for cnt, gen_func, mode in source_infos:
@@ -90,7 +99,7 @@ def process_sources(sources: List[Dict[str, Any]], output_dir: Path, img_name: s
                 logging.warning(f"Failed to preprocess image: {e}. Skipping.")
                 continue
             img_mm[current_idx] = img_proc
-            lbl_mm[current_idx] = label if mode == 'labeled' else -1
+            lbl_mm[current_idx] = label if mode == "labeled" else -1
             current_idx += 1
             if current_idx % 100000 == 0:
                 logging.info(f"Processed {current_idx}/{total}")
@@ -108,7 +117,7 @@ def process_sources(sources: List[Dict[str, Any]], output_dir: Path, img_name: s
     np.save(str(img_path), img_data)
     np.save(str(lbl_path), lbl_data)
 
-    logging.info(f"Preprocessing finished.")
+    logging.info("Preprocessing finished.")
     return actual, img_path, lbl_path
 
 
@@ -117,20 +126,28 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', default='config/preprocessing.yaml', help='Path to preprocessing config file')
-    
+    parser.add_argument(
+        "--config",
+        default="config/preprocessing.yaml",
+        help="Path to preprocessing config file",
+    )
+
     args = parser.parse_args()
 
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
 
-    with open(args.config, 'r', encoding='utf-8') as f:
+    with open(args.config, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    output_dir = Path(config.get('output_dir', 'processed'))
-    img_name = config.get('img_name', 'train_images.npy')
-    lbl_name = config.get('lbl_name', 'train_labels.npy')
-    
-    total_samples, images_path, labels_path = process_sources(config['data_sources'], output_dir, img_name, lbl_name)
+    output_dir = Path(config.get("output_dir", "processed"))
+    img_name = config.get("img_name", "train_images.npy")
+    lbl_name = config.get("lbl_name", "train_labels.npy")
+
+    total_samples, images_path, labels_path = process_sources(
+        config["data_sources"], output_dir, img_name, lbl_name
+    )
 
     logging.info(f"Total samples processed: {total_samples}")
     logging.info(f"Images saved to: {images_path}")

@@ -19,7 +19,10 @@ class PreloadedDataset(Dataset):
         transform (callable, optional): 增强/预处理函数（通常为 albumentations.Compose）
         soft_labels (bool): 若为 True，labels 应为形状 (N, num_classes) 的浮点数组
     """
-    def __init__(self, images_path, labels_path=None, transform=None, soft_labels=False):
+
+    def __init__(
+        self, images_path, labels_path=None, transform=None, soft_labels=False
+    ):
         self.images = np.load(images_path)
         self.labels = None
         self.soft_labels = soft_labels
@@ -39,10 +42,10 @@ class PreloadedDataset(Dataset):
         # 读取图像（uint8, HxW）
         img = self.images[idx]
         # 转为 PIL 灰度图，以兼容 albumentations
-        img = Image.fromarray(img, mode='L')
+        img = Image.fromarray(img, mode="L")
 
         if self.transform:
-            img = self.transform(image=np.array(img))['image']
+            img = self.transform(image=np.array(img))["image"]
         else:
             # 默认转为张量并归一化（如果无 transform）
             img = torch.from_numpy(np.array(img, dtype=np.float32) / 255.0).unsqueeze(0)

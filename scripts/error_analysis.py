@@ -4,21 +4,15 @@
 用法：
     python scripts/error_analysis.py --config config/default.yaml \
         --checkpoint checkpoints/best_ema.pth \
-        --output_dir error_analysis
+        --output_dir analysis
 """
 
 import argparse
 import sys
 from pathlib import Path
 
-import pandas as pd
 import torch
 from tqdm import tqdm
-from torchvision.utils import save_image
-
-# 项目根目录导入
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.models.convnextv2_femto import ConvNeXtV2FemtoMNIST
 from src.data_utils.dataset import PreloadedDataset
@@ -26,10 +20,14 @@ from src.data_utils.augmentations import build_val_transform
 from src.inference.tta import TTAPredictor
 import yaml
 
-
 import base64
 from io import BytesIO
 from PIL import Image as PILImage
+
+# 项目根目录导入
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 
 def create_error_html(errors, images_tensor, indices, output_path):
     """
@@ -38,46 +36,53 @@ def create_error_html(errors, images_tensor, indices, output_path):
     images_tensor: list of tensors (1, 28, 28) uint8，与 all_images 对应
     indices: list of global indices (对应原始数据集索引)
     """
-    html = ['<html><head><meta charset="utf-8"><title>错误样本分析</title>',
-            '<style>table { border-collapse: collapse; } td { padding: 10px; text-align: center; border: 1px solid #ccc; } img { width: 56px; height: 56px; }</style>',
-            '</head><body><table>']
-    
+    html = [
+        '<html><head><meta charset="utf-8"><title>错误样本分析</title>',
+        "<style>table { border-collapse: collapse; } td { padding: 10px; text-align: center; border: 1px solid #ccc; } img { width: 56px; height: 56px; }</style>",
+        "</head><body><table>",
+    ]
+
     # 每行放8个样本，可自行调节
     num_cols = 8
     for row_start in range(0, len(errors), num_cols):
-        html.append('<tr>')
-        row_errors = errors[row_start:row_start + num_cols]
+        html.append("<tr>")
+        row_errors = errors[row_start : row_start + num_cols]
         for idx_in_list, true_label, pred_label in row_errors:
             img_tensor = images_tensor[idx_in_list]  # (1, 28, 28) uint8
             # 转为 PIL 并保存为 base64
-            pil_img = PILImage.fromarray(img_tensor[0].numpy(), mode='L')
+            pil_img = PILImage.fromarray(img_tensor[0].numpy(), mode="L")
             buf = BytesIO()
-            pil_img.save(buf, format='PNG')
-            img_b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+            pil_img.save(buf, format="PNG")
+            img_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
             img_src = f"data:image/png;base64,{img_b64}"
-            
+
             # 单元格内容
-            html.append(f'<td><img src="{img_src}"><br>真实: {true_label}<br>预测: {pred_label}<br><small>原索引: {indices[idx_in_list]}</small></td>')
-        html.append('</tr>')
-    
-    html.append('</table></body></html>')
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        f.write('\n'.join(html))
-        
+            html.append(
+                f'<td><img src="{img_src}"><br>真实: {true_label}<br>预测: {pred_label}<br><small>原索引: {indices[idx_in_list]}</small></td>'
+            )
+        html.append("</tr>")
+
+    html.append("</table></body></html>")
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(html))
+
+
 def main():
     parser = argparse.ArgumentParser(description="Analyze model errors")
-    parser.add_argument('--config', default='config/default.yaml')
-    parser.add_argument('--checkpoint', required=True, help='模型权重路径')
-    parser.add_argument('--output_dir', default='error_analysis', help='输出目录')
-    parser.add_argument('--use_tta', action='store_true', default=True, help='是否使用 TTA')
-    parser.add_argument('--batch_size', type=int, default=256)
+    parser.add_argument("--config", default="config/default.yaml")
+    parser.add_argument("--checkpoint", required=True, help="模型权重路径")
+    parser.add_argument("--output_dir", default="analysis", help="输出目录")
+    parser.add_argument(
+        "--use_tta", action="store_true", default=True, help="是否使用 TTA"
+    )
+    parser.add_argument("--batch_size", type=int, default=256)
     args = parser.parse_args()
 
-    with open(args.config, 'r', encoding='utf-8') as f:
+    with open(args.config, "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
 
-    device = torch.device(cfg['training'].get('device', 'cuda'))
+    device = torch.device(cfg["training"].get("device", "cuda"))
     print(f"Device: {device}")
 
     # 加载模型
@@ -88,34 +93,37 @@ def main():
     model.eval()
 
     # 准备验证集（有标签）
-    data_cfg = cfg['data']
+    data_cfg = cfg["data"]
     val_transform = build_val_transform(cfg)
     val_dataset = PreloadedDataset(
-        images_path=data_cfg['val_images_path'],
-        labels_path=data_cfg['val_labels_path'],
+        images_path=data_cfg["val_images_path"],
+        labels_path=data_cfg["val_labels_path"],
         transform=val_transform,
-        soft_labels=False
+        soft_labels=False,
     )
     val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=args.batch_size, shuffle=False,
-        num_workers=4, pin_memory=True
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=4,
+        pin_memory=True,
     )
 
     # TTA 预测器（可选）
     tta = None
     if args.use_tta:
-        tta_cfg = cfg['inference']['tta']
+        tta_cfg = cfg["inference"]["tta"]
         tta = TTAPredictor(
-            num_views=tta_cfg.get('num_views', 12),
-            scale_range=tta_cfg.get('scale_range', (0.9, 1.1)),
-            translate=tta_cfg.get('translate', 2),
-            rotation=tta_cfg.get('rotation', 10.0),
-            horizontal_flip=False
+            num_views=tta_cfg.get("num_views", 12),
+            scale_range=tta_cfg.get("scale_range", (0.9, 1.1)),
+            translate=tta_cfg.get("translate", 2),
+            rotation=tta_cfg.get("rotation", 10.0),
+            horizontal_flip=False,
         )
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    img_dir = output_dir / 'error_images'
+    img_dir = output_dir / "error_images"
     img_dir.mkdir(exist_ok=True)
 
     all_preds = []
@@ -151,8 +159,10 @@ def main():
         if true != pred:
             errors.append((i, true, pred))
 
-    print(f"Total samples: {len(all_labels)}, Errors: {len(errors)} "
-          f"({100.0 * len(errors) / len(all_labels):.2f}%)")
+    print(
+        f"Total samples: {len(all_labels)}, Errors: {len(errors)} "
+        f"({100.0 * len(errors) / len(all_labels):.2f}%)"
+    )
 
     # 保存错误图像和报告
     # records = []
@@ -172,11 +182,11 @@ def main():
     # df.to_csv(output_dir / 'error_report.csv', index=False)
     # print(f"Saved {len(errors)} error images to {img_dir}")
     # print(f"Error report saved to {output_dir / 'error_report.csv'}")
-    
+
     # 在错误保存后生成 HTML 表格
-    create_error_html(errors, all_images, indices, output_dir / 'error_grid.html')
+    create_error_html(errors, all_images, indices, output_dir / "error_grid.html")
     print(f"HTML 错误表已生成: {output_dir / 'error_grid.html'}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

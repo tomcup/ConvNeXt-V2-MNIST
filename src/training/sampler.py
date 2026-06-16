@@ -1,8 +1,10 @@
 import torch
 import numpy as np
 
+
 class ResumableRandomSubsetSampler(torch.utils.data.Sampler):
     """每个 epoch 可重新随机抽样的 sampler，支持 persistent workers"""
+
     def __init__(self, total_size, num_samples):
         self.total_size = total_size
         self.num_samples = num_samples

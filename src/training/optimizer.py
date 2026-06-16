@@ -15,26 +15,21 @@ def build_optimizer_and_scheduler(model, cfg: dict):
     返回:
         (optimizer, scheduler)
     """
-    opt_cfg = cfg['optimizer']
-    sched_cfg = cfg['scheduler']
-    train_cfg = cfg['training']
+    opt_cfg = cfg["optimizer"]
+    sched_cfg = cfg["scheduler"]
+    train_cfg = cfg["training"]
 
     # ---------- 优化器参数 ----------
-    lr = float(opt_cfg['lr'])
-    weight_decay = float(opt_cfg['weight_decay'])
-    betas = tuple(opt_cfg['betas'])
+    lr = float(opt_cfg["lr"])
+    weight_decay = float(opt_cfg["weight_decay"])
+    betas = tuple(opt_cfg["betas"])
 
-    optimizer = AdamW(
-        model.parameters(),
-        lr=lr,
-        weight_decay=weight_decay,
-        betas=betas
-    )
+    optimizer = AdamW(model.parameters(), lr=lr, weight_decay=weight_decay, betas=betas)
 
     # ---------- 学习率调度参数 ----------
-    min_lr = float(sched_cfg['min_lr'])
-    warmup_epochs = int(sched_cfg['warmup_epochs'])
-    total_epochs = int(train_cfg['epochs'])
+    min_lr = float(sched_cfg["min_lr"])
+    warmup_epochs = int(sched_cfg["warmup_epochs"])
+    total_epochs = int(train_cfg["epochs"])
 
     # 学习率乘子函数（epoch 从 0 开始）
     def lr_lambda(epoch: int) -> float:

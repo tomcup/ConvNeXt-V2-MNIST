@@ -17,6 +17,7 @@ class RobustLoss(nn.Module):
     - 当 targets 为软标签 (dtype=torch.float, shape=(batch, num_classes)) 时，
       直接计算交叉熵: -sum(target * log_softmax(output)) / batch_size。
     """
+
     def __init__(self, label_smoothing: float = 0.0):
         super().__init__()
         self.label_smoothing = label_smoothing
@@ -28,12 +29,17 @@ class RobustLoss(nn.Module):
         if targets.dtype == torch.long and targets.ndim == 1:
             return self.ce(outputs, targets)
         # 软标签：二维浮点张量，形状 (batch_size, num_classes)
-        elif targets.dtype in (torch.float16, torch.float32, torch.float64) and \
-             targets.ndim == 2 and targets.shape == outputs.shape:
+        elif (
+            targets.dtype in (torch.float16, torch.float32, torch.float64)
+            and targets.ndim == 2
+            and targets.shape == outputs.shape
+        ):
             log_probs = F.log_softmax(outputs, dim=-1)
             return -(targets * log_probs).sum(dim=-1).mean()
         else:
-            raise ValueError(f"Unsupported targets shape {targets.shape} and dtype {targets.dtype}")
+            raise ValueError(
+                f"Unsupported targets shape {targets.shape} and dtype {targets.dtype}"
+            )
 
 
 def build_loss(cfg: dict) -> RobustLoss:

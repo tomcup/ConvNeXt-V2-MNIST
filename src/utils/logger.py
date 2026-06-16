@@ -11,8 +11,13 @@ from torch.utils.tensorboard import SummaryWriter
 class Logger:
     """统一的日志记录器，可同时写入 TensorBoard 和 Wandb，并输出到控制台"""
 
-    def __init__(self, log_dir: str, use_tensorboard: bool = True,
-                 use_wandb: bool = False, run_name: str = "convnext_mnist"):
+    def __init__(
+        self,
+        log_dir: str,
+        use_tensorboard: bool = True,
+        use_wandb: bool = False,
+        run_name: str = "convnext_mnist",
+    ):
         self.log_dir = log_dir
         os.makedirs(log_dir, exist_ok=True)
 
@@ -26,6 +31,7 @@ class Logger:
         if self.use_wandb:
             try:
                 import wandb
+
                 wandb.init(project="robust-mnist", name=run_name, dir=log_dir)
                 self.wandb = wandb
             except ImportError:
@@ -66,5 +72,5 @@ def build_logger(cfg: dict) -> Logger:
         log_dir=log_cfg["log_dir"],
         use_tensorboard=log_cfg.get("use_tensorboard", True),
         use_wandb=log_cfg.get("use_wandb", False),
-        run_name=model_name
+        run_name=model_name,
     )

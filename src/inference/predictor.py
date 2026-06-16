@@ -14,8 +14,9 @@ from .tta import TTAPredictor
 
 class TestDataset(Dataset):
     """测试数据集，从 .npy 内存映射文件中读取（无标签）"""
+
     def __init__(self, npy_path: str, mean: float, std: float):
-        self.data = np.load(npy_path, mmap_mode='r')  # shape (N, 28, 28) uint8
+        self.data = np.load(npy_path, mmap_mode="r")  # shape (N, 28, 28) uint8
         self.mean = mean
         self.std = std
 
@@ -23,10 +24,10 @@ class TestDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        img = self.data[idx]                              # (28,28) uint8 [0,255]
-        img = img.astype(np.float32) / 255.0              # [0,1]
-        img = (img - self.mean) / self.std                 # 归一化到约[-1,1]
-        img = torch.from_numpy(img).unsqueeze(0)          # (1,28,28)
+        img = self.data[idx]  # (28,28) uint8 [0,255]
+        img = img.astype(np.float32) / 255.0  # [0,1]
+        img = (img - self.mean) / self.std  # 归一化到约[-1,1]
+        img = torch.from_numpy(img).unsqueeze(0)  # (1,28,28)
         return img
 
 
@@ -48,6 +49,7 @@ def run_inference(cfg: dict):
 
     # 动态导入模型架构（避免循环依赖）
     from ..models.convnextv2_femto import ConvNeXtV2FemtoMNIST
+
     model = ConvNeXtV2FemtoMNIST()
     state_dict = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
@@ -58,8 +60,9 @@ def run_inference(cfg: dict):
     data_cfg = cfg["data"]
     test_path = data_cfg.get("test_images_path", None)
     if test_path is None or not os.path.isfile(test_path):
-        raise FileNotFoundError("Test dataset not found. "
-                                "Please run preprocessing for test data.")
+        raise FileNotFoundError(
+            "Test dataset not found. Please run preprocessing for test data."
+        )
     mean = data_cfg["mean"][0]
     std = data_cfg["std"][0]
     test_dataset = TestDataset(test_path, mean, std)
@@ -86,8 +89,8 @@ def run_inference(cfg: dict):
     with torch.no_grad():
         for images in test_loader:
             images = images.to(device)
-            probs = tta.predict(model, images)    # (B, num_classes)
-            preds = probs.argmax(dim=-1)          # (B,)
+            probs = tta.predict(model, images)  # (B, num_classes)
+            preds = probs.argmax(dim=-1)  # (B,)
             predictions.extend(preds.cpu().tolist())
 
     # ---------- 保存结果 ----------

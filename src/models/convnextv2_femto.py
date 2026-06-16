@@ -3,7 +3,6 @@ ConvNeXt V2 Femto 定制版 —— 针对 28×28 单通道 MNIST
 根据 default.yaml 中的模型结构实现
 """
 
-from functools import partial
 import torch
 import torch.nn as nn
 
@@ -17,6 +16,7 @@ class ConvNeXtV2FemtoMNIST(nn.Module):
     - 4个阶段，2次下采样（28→14→7）
     - 头：LayerNorm → GlobalAvgPool → Dropout → Linear(384, 10)
     """
+
     def __init__(
         self,
         in_channels: int = 1,
@@ -29,8 +29,14 @@ class ConvNeXtV2FemtoMNIST(nn.Module):
 
         # ---------- Stem ----------
         self.stem = nn.Sequential(
-            nn.Conv2d(in_channels, stem_out_channels, kernel_size=3,
-                      stride=1, padding=1, bias=False),
+            nn.Conv2d(
+                in_channels,
+                stem_out_channels,
+                kernel_size=3,
+                stride=1,
+                padding=1,
+                bias=False,
+            ),
             LayerNorm2d(stem_out_channels),
             nn.GELU(),
         )
@@ -39,14 +45,42 @@ class ConvNeXtV2FemtoMNIST(nn.Module):
         if stages_config is None:
             # 默认配置（来自 default.yaml）
             stages_config = [
-                {"stage_index": 1, "in_channels": 48, "out_channels": 48,
-                 "depth": 2, "kernel_size": 7, "stride": 1, "drop_path_rate": 0.0},
-                {"stage_index": 2, "in_channels": 48, "out_channels": 96,
-                 "depth": 2, "kernel_size": 7, "stride": 2, "drop_path_rate": 0.05},
-                {"stage_index": 3, "in_channels": 96, "out_channels": 192,
-                 "depth": 4, "kernel_size": 7, "stride": 2, "drop_path_rate": 0.1},
-                {"stage_index": 4, "in_channels": 192, "out_channels": 384,
-                 "depth": 2, "kernel_size": 3, "stride": 1, "drop_path_rate": 0.15},
+                {
+                    "stage_index": 1,
+                    "in_channels": 48,
+                    "out_channels": 48,
+                    "depth": 2,
+                    "kernel_size": 7,
+                    "stride": 1,
+                    "drop_path_rate": 0.0,
+                },
+                {
+                    "stage_index": 2,
+                    "in_channels": 48,
+                    "out_channels": 96,
+                    "depth": 2,
+                    "kernel_size": 7,
+                    "stride": 2,
+                    "drop_path_rate": 0.05,
+                },
+                {
+                    "stage_index": 3,
+                    "in_channels": 96,
+                    "out_channels": 192,
+                    "depth": 4,
+                    "kernel_size": 7,
+                    "stride": 2,
+                    "drop_path_rate": 0.1,
+                },
+                {
+                    "stage_index": 4,
+                    "in_channels": 192,
+                    "out_channels": 384,
+                    "depth": 2,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "drop_path_rate": 0.15,
+                },
             ]
 
         self.stages = nn.ModuleList()

@@ -10,6 +10,7 @@ import torch.nn as nn
 
 class LayerNorm2d(nn.Module):
     """对通道维度执行 LayerNorm (与 ConvNeXt 官方实现一致)"""
+
     def __init__(self, dim, eps=1e-6):
         super().__init__()
         self.norm = nn.LayerNorm(dim, eps=eps)
@@ -24,6 +25,7 @@ class LayerNorm2d(nn.Module):
 
 class DropPath(nn.Module):
     """随机丢弃整个样本（Stochastic Depth），用于残差连接"""
+
     def __init__(self, drop_prob: float = 0.0):
         super().__init__()
         self.drop_prob = drop_prob
@@ -44,6 +46,7 @@ class Block(nn.Module):
     结构：Depthwise Conv → LayerNorm → 1x1 Conv (4x扩维) → GELU → 1x1 Conv (降维)
           → LayerScale → DropPath，最后残差连接
     """
+
     def __init__(
         self,
         dim: int,
@@ -52,8 +55,14 @@ class Block(nn.Module):
         layer_scale_init_value: float = 1e-6,
     ):
         super().__init__()
-        self.dwconv = nn.Conv2d(dim, dim, kernel_size=kernel_size,
-                                padding=kernel_size // 2, groups=dim, bias=False)
+        self.dwconv = nn.Conv2d(
+            dim,
+            dim,
+            kernel_size=kernel_size,
+            padding=kernel_size // 2,
+            groups=dim,
+            bias=False,
+        )
         self.norm = LayerNorm2d(dim)
         self.pwconv1 = nn.Conv2d(dim, 4 * dim, kernel_size=1)
         self.act = nn.GELU()
@@ -61,8 +70,9 @@ class Block(nn.Module):
 
         # LayerScale（可学习的逐通道缩放因子）
         if layer_scale_init_value > 0:
-            self.gamma = nn.Parameter(layer_scale_init_value * torch.ones(dim),
-                                      requires_grad=True)
+            self.gamma = nn.Parameter(
+                layer_scale_init_value * torch.ones(dim), requires_grad=True
+            )
         else:
             self.gamma = None
 
@@ -89,6 +99,7 @@ class ConvNeXtStage(nn.Module):
     - 若 stride != 1 或输入输出通道不同，则先用 2×2 卷积下采样+通道变换
     - 随后堆叠 depth 个 Block（均保持 out_ch 维度）
     """
+
     def __init__(
         self,
         in_ch: int,
@@ -103,7 +114,7 @@ class ConvNeXtStage(nn.Module):
         if stride != 1 or in_ch != out_ch:
             self.downsample = nn.Sequential(
                 LayerNorm2d(in_ch),
-                nn.Conv2d(in_ch, out_ch, kernel_size=2, stride=stride, bias=False)
+                nn.Conv2d(in_ch, out_ch, kernel_size=2, stride=stride, bias=False),
             )
         else:
             self.downsample = nn.Identity()

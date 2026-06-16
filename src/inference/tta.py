@@ -18,6 +18,7 @@ class TTAPredictor:
         rotation: 旋转角度范围（例如10表示±10°）
         horizontal_flip: 是否水平翻转（手写数字禁止）
     """
+
     def __init__(
         self,
         num_views: int = 12,
@@ -63,7 +64,7 @@ class TTAPredictor:
 
         # 平均所有视图的概率
         stacked = torch.stack(all_probs, dim=0)  # (views, B, num_classes)
-        avg_probs = stacked.mean(dim=0)          # (B, num_classes)
+        avg_probs = stacked.mean(dim=0)  # (B, num_classes)
         return avg_probs
 
     def _apply_random_transform(self, images: torch.Tensor) -> torch.Tensor:
@@ -81,10 +82,8 @@ class TTAPredictor:
         for i in range(B):
             img = images[i]  # (C, H, W)
             # 随机缩放因子
-            scale = (
-                self.scale_range[0]
-                + torch.rand(1, device=device).item()
-                * (self.scale_range[1] - self.scale_range[0])
+            scale = self.scale_range[0] + torch.rand(1, device=device).item() * (
+                self.scale_range[1] - self.scale_range[0]
             )
             # 随机平移（像素）
             tx = int(torch.randint(-self.translate, self.translate + 1, (1,)).item())
@@ -99,8 +98,10 @@ class TTAPredictor:
                 angle=angle,
                 translate=[tx, ty],
                 scale=scale,
-                shear= [0.0, 0.0],  # 不使用剪切
-                fill= [0.0],  # 归一化后均值0填充（因为mean=0.5，std=0.5，像素值范围约[-1,1]，0是中间值）
+                shear=[0.0, 0.0],  # 不使用剪切
+                fill=[
+                    0.0
+                ],  # 归一化后均值0填充（因为mean=0.5，std=0.5，像素值范围约[-1,1]，0是中间值）
             )
             transformed.append(transformed_img)
 

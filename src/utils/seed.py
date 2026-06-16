@@ -16,7 +16,9 @@ def set_seed(seed: int = 42):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    torch.xpu.manual_seed(seed) # It's safe to call this function if XPU is not available; in that case, it is silently ignored.
+    torch.xpu.manual_seed(
+        seed
+    )  # It's safe to call this function if XPU is not available; in that case, it is silently ignored.
 
     # 确保卷积等操作在相同输入下产生相同输出（可能影响性能）
     torch.backends.cudnn.deterministic = True
