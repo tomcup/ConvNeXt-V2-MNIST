@@ -70,6 +70,10 @@ def main():
     model = ConvNeXtV2FemtoMNIST().to(device)
     ema_model = ConvNeXtV2FemtoMNIST().to(device)
     ema_model.load_state_dict(model.state_dict())  # 初始化为相同权重
+    
+    if logger.writer:
+        dummy_input = torch.randn(1, 1, 28, 28).to(device)
+        logger.writer.add_graph(model, dummy_input)
 
     # 损失函数
     loss_fn = build_loss(cfg)

@@ -9,6 +9,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Subset
+import torchvision
 from tqdm import tqdm
 from .loss import RobustLoss
 from .sampler import ResumableRandomSubsetSampler
@@ -124,6 +125,9 @@ class Trainer:
 
             # 训练一个 epoch
             avg_train_loss = self._train_epoch(train_loader, epoch)
+            
+            val_loss = None
+            val_acc = None
 
             # 验证
             if (epoch + 1) % self.val_every == 0 or epoch == self.epochs - 1:
@@ -146,36 +150,37 @@ class Trainer:
                         is_best=True,
                     )
                     print(f"  => New best model saved (acc={val_acc:.4f})")
-            else:
-                # 非验证轮次仍定期保存一次检查点（用于恢复）
-                if (epoch + 1) % self.save_every_n_epochs == 0:
-                    save_checkpoint(
-                        save_path=os.path.join(self.checkpoint_dir, f"epoch_{epoch+1}"),
-                        model=self.model,
-                        ema_model=self.ema_model,
-                        optimizer=self.optimizer,
-                        scheduler=self.scheduler,
-                        epoch=epoch,
-                        best_val_acc=self.best_val_acc,
-                    )
+                
+                # 写入 tensorboard
+                if self.logger.writer:
+                    self.logger.writer.add_scalar('train/loss', avg_train_loss, epoch + 1)
+                    self.logger.writer.add_scalar('train/lr', self.optimizer.param_groups[0]['lr'], epoch + 1)
+                    if val_loss is not None:
+                        self.logger.writer.add_scalar('val/loss', val_loss, epoch + 1)
+                        self.logger.writer.add_scalar('val/accuracy', val_acc, epoch + 1)
+                        
+                    # 取一个 batch 的图像并记录到 tensorboard
+                    sample_batch = next(iter(train_loader))[0][:8]  # 前 8 张
+                    grid = torchvision.utils.make_grid(sample_batch.cpu(), nrow=4, normalize=True)
+                    self.logger.log_image('augmented_samples', grid, epoch)
+            
+            # 定期保存检查点
+            if (epoch + 1) % self.save_every_n_epochs == 0:
+                save_checkpoint(
+                    save_path=os.path.join(self.checkpoint_dir, f"epoch_{epoch+1}"),
+                    model=self.model,
+                    ema_model=self.ema_model,
+                    optimizer=self.optimizer,
+                    scheduler=self.scheduler,
+                    epoch=epoch,
+                    best_val_acc=self.best_val_acc,
+                )
 
             # 学习率调度（epoch 级）
             self.scheduler.step()
 
-            epoch_time = time.time() - start_time
-            val_loss, val_acc = None, None
-            if (epoch + 1) % self.val_every == 0 or epoch == self.epochs - 1:
-                val_loss, val_acc = self._validate(epoch)
-
-            # 写入 tensorboard（不打印）
-            if self.logger.writer:
-                self.logger.writer.add_scalar('train/loss', avg_train_loss, epoch + 1)
-                self.logger.writer.add_scalar('train/lr', self.optimizer.param_groups[0]['lr'], epoch + 1)
-                if val_loss is not None:
-                    self.logger.writer.add_scalar('val/loss', val_loss, epoch + 1)
-                    self.logger.writer.add_scalar('val/accuracy', val_acc, epoch + 1)
-
             # 构建一行简洁的日志输出
+            epoch_time = time.time() - start_time
             log_parts = [f"Epoch {epoch+1:03d}",
                         f"Train Loss: {avg_train_loss:.4f}",
                         f"LR: {self.optimizer.param_groups[0]['lr']:.6f}"]
