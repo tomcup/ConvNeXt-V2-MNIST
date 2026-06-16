@@ -39,8 +39,12 @@ config/local.yaml
 # Dataset
 data/
 
-# Error analysis outputs
-error_analysis/
+# Analysis outputs
+analysis/
 
 # Private config
 config/
+
+# Model
+*.pt
+*.pth
